@@ -3,7 +3,7 @@ name: Deploy to Render and Run Migrations
 on:
   push:
     branches:
-      - Render-Deploymentq
+      - Render-Deployment
 
 jobs:
   deploy:
