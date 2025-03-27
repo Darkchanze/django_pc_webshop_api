@@ -5,12 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2bb06f76-5ad4-4d11-a4e3-b940be52b52e" name="Changes" comment="requirements">
-      <change afterPath="$PROJECT_DIR$/app/orders/permissions.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/orders/serializers.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/orders/serializers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/orders/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/orders/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/permissions.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/permissions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/users/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/users/views.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,7 +56,7 @@
     &quot;RunOnceActivity.OpenDjangoStructureViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;deployment&quot;,
     &quot;last_opened_file_path&quot;: &quot;D:/Python Projects/django_pc_webshop_api/app/orders&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
