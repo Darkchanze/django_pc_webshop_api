@@ -1,32 +1,32 @@
 # Django PC Webshop API
 
-Eine RESTful API für einen PC-Komponenten Webshop, entwickelt mit Django REST Framework.
+A RESTful API for a PC Components Webshop, developed with Django REST Framework.
 
 ## 🚀 Features
 
-- RESTful API mit Django REST Framework
-- JWT-Authentifizierung
-- PostgreSQL Datenbank
-- Swagger/OpenAPI Dokumentation
-- CORS-Unterstützung
-- Automatische API-Dokumentation mit drf-spectacular
-- Deployment-ready für Render.com
+- RESTful API with Django REST Framework
+- JWT Authentication
+- PostgreSQL Database
+- Swagger/OpenAPI Documentation
+- CORS Support
+- Automatic API Documentation with drf-spectacular
+- Deployment-ready for Render.com
 
-## 📋 Voraussetzungen
+## 📋 Prerequisites
 
-- Python 3.12 oder höher
-- PostgreSQL (für Produktion)
+- Python 3.12 or higher
+- PostgreSQL (for production)
 - pip (Python Package Manager)
 
 ## 🛠️ Installation
 
-1. **Repository klonen**
+1. **Clone Repository**
 ```bash
 git clone https://github.com/IhrUsername/django_pc_webshop_api.git
 cd django_pc_webshop_api
 ```
 
-2. **Virtuelle Umgebung erstellen und aktivieren**
+2. **Create and Activate Virtual Environment**
 ```bash
 # Windows
 python -m venv venv
@@ -37,32 +37,32 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-3. **Abhängigkeiten installieren**
+3. **Install Dependencies**
 ```bash
 pip install -r requirements.txt
 ```
 
-4. **Umgebungsvariablen einrichten**
-Erstellen Sie eine `.env` Datei im Hauptverzeichnis:
+4. **Set Up Environment Variables**
+Create a `.env` file in the root directory:
 ```env
-DATABASE_ADMIN_PASSWORD_LOCAL="IhrLokalesPasswort"
-DATABASE_ADMIN_PASSWORD_RENDER="IhrRenderPasswort"
+DATABASE_ADMIN_PASSWORD_LOCAL="YourLocalPassword"
+DATABASE_ADMIN_PASSWORD_RENDER="YourRenderPassword"
 PYTHONPATH=D:\Python Projects\django_pc_webshop_api
 ```
 
-5. **Datenbank-Migrationen ausführen**
+5. **Run Database Migrations**
 ```bash
 python app/manage.py migrate
 ```
 
-6. **Statische Dateien sammeln**
+6. **Collect Static Files**
 ```bash
 python app/manage.py collectstatic --noinput
 ```
 
-## 🚀 Entwicklungsserver starten
+## 🚀 Start Development Server
 
-1. **Virtuelle Umgebung aktivieren** (falls noch nicht geschehen)
+1. **Activate Virtual Environment** (if not already done)
 ```bash
 # Windows
 .\venv\Scripts\activate
@@ -71,99 +71,99 @@ python app/manage.py collectstatic --noinput
 source venv/bin/activate
 ```
 
-2. **Server starten**
+2. **Start Server**
 ```bash
 python app/manage.py runserver
 ```
 
-Der Server ist dann unter `http://127.0.0.1:8000` erreichbar.
+The server will be available at `http://127.0.0.1:8000`.
 
-## 📚 API-Dokumentation
+## 📚 API Documentation
 
-Die API-Dokumentation ist unter folgenden URLs verfügbar:
+The API documentation is available at the following URLs:
 - Swagger UI: `http://127.0.0.1:8000/swagger/`
 - ReDoc: `http://127.0.0.1:8000/redoc/`
 
-## 🏗️ Projektstruktur
+## 🏗️ Project Structure
 
 ```
 django_pc_webshop_api/
-├── app/                    # Hauptanwendungsverzeichnis
-│   ├── app/               # Django-Projektkonfiguration
-│   ├── users/             # Benutzer-Management
-│   ├── pc_components/     # PC-Komponenten
-│   ├── orders/           # Bestellungen
-│   └── static/           # Statische Dateien
-├── venv/                  # Virtuelle Umgebung
-├── requirements.txt       # Python-Abhängigkeiten
-├── .env                   # Umgebungsvariablen
-├── build.sh              # Build-Skript für Render
-├── Procfile              # Prozess-Konfiguration für Render
-└── render.yaml           # Render.com Konfiguration
+├── app/                    # Main application directory
+│   ├── app/               # Django project configuration
+│   ├── users/             # User management
+│   ├── pc_components/     # PC components
+│   ├── orders/           # Orders
+│   └── static/           # Static files
+├── venv/                  # Virtual environment
+├── requirements.txt       # Python dependencies
+├── .env                   # Environment variables
+├── build.sh              # Build script for Render
+├── Procfile              # Process configuration for Render
+└── render.yaml           # Render.com configuration
 ```
 
-## 🔧 Konfiguration
+## 🔧 Configuration
 
-### Lokale Entwicklung
-- SQLite wird als Datenbank verwendet
-- Debug-Modus ist aktiviert
-- Statische Dateien werden lokal bereitgestellt
+### Local Development
+- SQLite is used as database
+- Debug mode is enabled
+- Static files are served locally
 
-### Produktion (Render.com)
-- PostgreSQL als Datenbank
-- Debug-Modus ist deaktiviert
-- Statische Dateien werden über WhiteNoise bereitgestellt
-- Gunicorn als WSGI-Server
+### Production (Render.com)
+- PostgreSQL as database
+- Debug mode is disabled
+- Static files are served via WhiteNoise
+- Gunicorn as WSGI server
 
-## 🚀 Deployment auf Render.com
+## 🚀 Deployment on Render.com
 
-1. **Repository auf GitHub pushen**
+1. **Push Repository to GitHub**
 ```bash
 git add .
-git commit -m "Deployment vorbereitet"
+git commit -m "Deployment prepared"
 git push origin main
 ```
 
-2. **Render.com Konfiguration**
-- Neue Web Service erstellen
-- GitHub Repository verbinden
-- Umgebungsvariablen setzen:
+2. **Render.com Configuration**
+- Create new Web Service
+- Connect GitHub Repository
+- Set environment variables:
   - `SECRET_KEY`
   - `DEBUG=False`
   - `ALLOWED_HOSTS`
-  - `DATABASE_URL` (wird automatisch von Render gesetzt)
+  - `DATABASE_URL` (automatically set by Render)
 
 3. **Deployment**
-- Render wird automatisch deployen
-- Build-Skript wird ausgeführt
-- Datenbank-Migrationen werden angewendet
-- Statische Dateien werden gesammelt
+- Render will deploy automatically
+- Build script will be executed
+- Database migrations will be applied
+- Static files will be collected
 
-## 🔒 Sicherheit
+## 🔒 Security
 
-- JWT-Authentifizierung für API-Endpunkte
-- CORS-Konfiguration für sichere Cross-Origin Requests
-- Sichere Passwort-Handhabung
-- Umgebungsvariablen für sensible Daten
+- JWT Authentication for API endpoints
+- CORS configuration for secure Cross-Origin Requests
+- Secure password handling
+- Environment variables for sensitive data
 
-## 🤝 Beitragen
+## 🤝 Contributing
 
-1. Fork das Repository
-2. Erstelle einen Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit deine Änderungen (`git commit -m 'Add some AmazingFeature'`)
-4. Push zum Branch (`git push origin feature/AmazingFeature`)
-5. Öffne einen Pull Request
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## 📝 Lizenz
+## 📝 License
 
-Dieses Projekt ist unter der MIT-Lizenz lizenziert - siehe die [LICENSE](LICENSE) Datei für Details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👥 Autoren
+## 👥 Authors
 
-- **Ihr Name** - *Initiale Arbeit* - [IhrGitHub](https://github.com/IhrUsername)
+- **Nico Wittemann** - [https://github.com/Darkchanze](https://github.com/Darkchanze)
 
-## 🙏 Danksagungen
+## 🙏 Acknowledgments
 
 - Django REST Framework Team
-- Render.com für das Hosting
-- Alle Mitwirkenden und Unterstützer
+- Render.com for hosting
+- All contributors and supporters
