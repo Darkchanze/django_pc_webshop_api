@@ -1,32 +1,32 @@
-# Django PC Webshop API - Lokale Entwicklung
+# Django PC Webshop API - Local Development
 
-Eine RESTful API für einen PC-Komponenten Webshop, entwickelt mit Django REST Framework. Diese Version ist für die lokale Entwicklung optimiert.
+A RESTful API for a PC Components Webshop, developed with Django REST Framework. This version is optimized for local development.
 
 ## 🚀 Features
 
-- RESTful API mit Django REST Framework
-- JWT-Authentifizierung
-- SQLite Datenbank (für lokale Entwicklung)
-- Swagger/OpenAPI Dokumentation
-- CORS-Unterstützung
-- Automatische API-Dokumentation mit drf-spectacular
-- Hot-Reload für schnelle Entwicklung
+- RESTful API with Django REST Framework
+- JWT Authentication
+- SQLite Database (for local development)
+- Swagger/OpenAPI Documentation
+- CORS Support
+- Automatic API Documentation with drf-spectacular
+- Hot-Reload for fast development
 
-## 📋 Voraussetzungen
+## 📋 Prerequisites
 
-- Python 3.12 oder höher
+- Python 3.12 or higher
 - pip (Python Package Manager)
-- Git (optional, für Versionskontrolle)
+- Git (optional, for version control)
 
 ## 🛠️ Installation
 
-1. **Repository klonen** (falls Sie Git verwenden)
+1. **Clone Repository** (if using Git)
 ```bash
 git clone https://github.com/IhrUsername/django_pc_webshop_api.git
 cd django_pc_webshop_api
 ```
 
-2. **Virtuelle Umgebung erstellen und aktivieren**
+2. **Create and Activate Virtual Environment**
 ```bash
 # Windows
 python -m venv venv
@@ -37,36 +37,36 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-3. **Abhängigkeiten installieren**
+3. **Install Dependencies**
 ```bash
 pip install -r requirements.txt
 ```
 
-4. **Umgebungsvariablen einrichten**
-Erstellen Sie eine `.env` Datei im Hauptverzeichnis:
+4. **Set Up Environment Variables**
+Create a `.env` file in the root directory:
 ```env
-DATABASE_ADMIN_PASSWORD_LOCAL="IhrLokalesPasswort"
+DATABASE_ADMIN_PASSWORD_LOCAL="YourLocalPassword"
 PYTHONPATH=D:\Python Projects\django_pc_webshop_api
 ```
 
-5. **Datenbank-Migrationen ausführen**
+5. **Run Database Migrations**
 ```bash
 python app/manage.py migrate
 ```
 
-6. **Superuser erstellen**
+6. **Create Superuser**
 ```bash
 python app/manage.py createsuperuser
 ```
 
-7. **Statische Dateien sammeln**
+7. **Collect Static Files**
 ```bash
 python app/manage.py collectstatic --noinput
 ```
 
-## 🚀 Entwicklungsserver starten
+## 🚀 Start Development Server
 
-1. **Virtuelle Umgebung aktivieren** (falls noch nicht geschehen)
+1. **Activate Virtual Environment** (if not already done)
 ```bash
 # Windows
 .\venv\Scripts\activate
@@ -75,105 +75,105 @@ python app/manage.py collectstatic --noinput
 source venv/bin/activate
 ```
 
-2. **Server starten**
+2. **Start Server**
 ```bash
 python app/manage.py runserver
 ```
 
-Der Server ist dann unter `http://127.0.0.1:8000` erreichbar.
+The server will be available at `http://127.0.0.1:8000`.
 
-## 📚 API-Dokumentation
+## 📚 API Documentation
 
-Die API-Dokumentation ist unter folgenden URLs verfügbar:
+The API documentation is available at the following URLs:
 - Swagger UI: `http://127.0.0.1:8000/swagger/`
 - ReDoc: `http://127.0.0.1:8000/redoc/`
 
-## 🏗️ Projektstruktur
+## 🏗️ Project Structure
 
 ```
 django_pc_webshop_api/
-├── app/                    # Hauptanwendungsverzeichnis
-│   ├── app/               # Django-Projektkonfiguration
-│   ├── users/             # Benutzer-Management
-│   ├── pc_components/     # PC-Komponenten
-│   ├── orders/           # Bestellungen
-│   └── static/           # Statische Dateien
-├── venv/                  # Virtuelle Umgebung
-├── requirements.txt       # Python-Abhängigkeiten
-├── .env                   # Umgebungsvariablen
-└── .gitignore            # Git Ignore-Datei
+├── app/                    # Main application directory
+│   ├── app/               # Django project configuration
+│   ├── users/             # User management
+│   ├── pc_components/     # PC components
+│   ├── orders/           # Orders
+│   └── static/           # Static files
+├── venv/                  # Virtual environment
+├── requirements.txt       # Python dependencies
+├── .env                   # Environment variables
+└── .gitignore            # Git ignore file
 ```
 
-## 🔧 Entwicklungskonfiguration
+## 🔧 Development Configuration
 
-### Datenbank
-- SQLite wird als lokale Datenbank verwendet
-- Datenbankdatei: `db.sqlite3`
-- Migrationen: `python app/manage.py makemigrations`
-- Anwenden: `python app/manage.py migrate`
+### Database
+- SQLite is used as local database
+- Database file: `db.sqlite3`
+- Migrations: `python app/manage.py makemigrations`
+- Apply: `python app/manage.py migrate`
 
-### Debug-Modus
-- Debug ist standardmäßig aktiviert
-- Detaillierte Fehlermeldungen
-- Hot-Reload für Code-Änderungen
+### Debug Mode
+- Debug is enabled by default
+- Detailed error messages
+- Hot-Reload for code changes
 
-### Statische Dateien
-- Lokale Entwicklung: `python app/manage.py collectstatic`
-- Statische Dateien werden in `app/staticfiles` gespeichert
+### Static Files
+- Local development: `python app/manage.py collectstatic`
+- Static files are stored in `app/staticfiles`
 
-## 🔒 Sicherheit
+## 🔒 Security
 
-### Lokale Entwicklung
-- JWT-Authentifizierung für API-Endpunkte
-- CORS-Konfiguration für lokale Entwicklung
-- Sichere Passwort-Handhabung
-- Umgebungsvariablen für sensible Daten
+### Local Development
+- JWT Authentication for API endpoints
+- CORS configuration for local development
+- Secure password handling
+- Environment variables for sensitive data
 
-### API-Tests
+### API Tests
 ```bash
-# Tests ausführen
+# Run tests
 python app/manage.py test
 
-# Spezifische App testen
+# Test specific app
 python app/manage.py test users
 python app/manage.py test pc_components
 python app/manage.py test orders
 ```
 
-## 🛠️ Nützliche Befehle
+## 🛠️ Useful Commands
 
 ```bash
-# Datenbank zurücksetzen
+# Reset database
 python app/manage.py flush
 
-# Neuen Superuser erstellen
+# Create new superuser
 python app/manage.py createsuperuser
 
-# Shell öffnen
+# Open shell
 python app/manage.py shell
 
-# Migrationen zurücksetzen
+# Reset migrations
 python app/manage.py migrate --fake zero
 python app/manage.py migrate
 ```
 
-## 🤝 Beitragen
+## 🤝 Contributing
 
-1. Fork das Repository
-2. Erstelle einen Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit deine Änderungen (`git commit -m 'Add some AmazingFeature'`)
-4. Push zum Branch (`git push origin feature/AmazingFeature`)
-5. Öffne einen Pull Request
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## 📝 Lizenz
+## 📝 License
 
-Dieses Projekt ist unter der MIT-Lizenz lizenziert - siehe die [LICENSE](LICENSE) Datei für Details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👥 Autoren
+## 👥 Authors
 
-- **Ihr Name** - *Initiale Arbeit* - [IhrGitHub](https://github.com/IhrUsername)
+- **Nico Wittemann** - [https://github.com/Darkchanze/django_pc_webshop_api](https://github.com/Darkchanze/django_pc_webshop_api)
 
-## 🙏 Danksagungen
+## 🙏 Acknowledgments
 
 - Django REST Framework Team
-- Alle Mitwirkenden und Unterstützer
+- All contributors and supporters
