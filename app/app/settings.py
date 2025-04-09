@@ -56,7 +56,8 @@ INSTALLED_APPS = [
     #OWN APPS
     'orders.apps.OrdersConfig',
     'pc_components.apps.PcComponentsConfig',
-    'users.apps.UsersConfig'
+    'users.apps.UsersConfig',
+    'pc_recommendations.apps.PcRecommendationsConfig'
 ]
 
 MIDDLEWARE = [

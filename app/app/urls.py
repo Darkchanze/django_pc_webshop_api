@@ -35,6 +35,7 @@ urlpatterns = [
     # App routes
     path('', include('users.urls')),
     path('', include('orders.urls')),
-    path('', include('pc_components.urls'))
+    path('', include('pc_components.urls')),
+    path('', include('pc_recommendations.urls'))
 
 ]
