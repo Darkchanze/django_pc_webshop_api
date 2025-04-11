@@ -19,49 +19,59 @@ class PCRecommendationView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            weight_prompt = f"""Erstelle eine Preisverteilung für einen PC mit:
-            Budget: {budget}€
-            Anforderungen: {requirements}
+            base_prompt = f"""Du bist ein erfahrener PC-Experte. Erstelle eine prozentuale Budgetverteilung für folgende Anforderungen:
 
-            WICHTIG:
-            - Gib NUR das JSON-Objekt zurück
-            - Keine zusätzlichen Erklärungen
-            - Summe muss genau 100% ergeben nicht mehr nicht weniger!
-            - Case muss mindestens 5% sein, mit Case dürfen wir aber nicht  über 100% kommen sondern genau auf 100%
+            - Gesamtbudget: {budget} Euro
+            - Anforderungen: {requirements}
 
-            Beispiel-Antwort:
+            ⚠️ Wichtig:
+            - Gib **nur ein valides JSON-Objekt** zurück
+            - **Keine zusätzlichen Erklärungen oder Kommentare!**
+            - Alle Werte müssen **Prozente** sein, **keine Euro-Beträge**
+            - Die **Summe ALLER Werte muss exakt 100** betragen – keine Rundungsfehler, keine Abweichungen.
+            - Der Anteil für das Gehäuse (\"case\") muss **mindestens 5%** betragen
+
+            Beispiel:
+
             {{
-                "cpu": 30,
-                "gpu": 30,
-                "ram": 15,
-                "ssd": 10,
-                "psu": 10,
-                "case": 5
-            }}"""
+              "cpu": 30,
+              "gpu": 30,
+              "ram": 15,
+              "ssd": 10,
+              "psu": 10,
+              "case": 5
+            }}
+            """
 
-            try:
-                weight_response = self._send_to_lm_studio(weight_prompt, is_weight_distribution=True)
-                print("after first _send_to_lm_studio")
-                weight_data = extract_json_from_ai(weight_response)
-                print(f"Daten von der AI: {weight_data}")
+            MAX_RETRIES = 6
+            for attempt in range(MAX_RETRIES):
+                try:
+                    prompt = base_prompt
+                    if attempt == 1:
+                        prompt += "\n\n// Wiederhole die Berechnung bitte mit einem komplett neuen Gedankengang. Die letzte Summe war nicht exakt 100 – bitte achte diesmal streng darauf, dass die Prozentwerte exakt 100 ergeben, keine Rundungsfehler."
 
-                if not self._validate_weight_distribution(weight_data):
-                    raise ValueError("Ungültige Preisverteilung von der AI")
+                    weight_response = self._send_to_lm_studio(prompt, is_weight_distribution=True)
+                    print("after first _send_to_lm_studio")
+                    weight_data = extract_json_from_ai(weight_response)
+                    print(f"Daten von der AI: {weight_data}")
 
-                filtered_components = self._get_filtered_components(budget, weight_data)
-                final_prompt = self._create_final_prompt(budget, requirements, filtered_components)
-                final_recommendation = self._send_to_lm_studio(final_prompt, is_weight_distribution=False)
+                    if not self._validate_weight_distribution(weight_data):
+                        raise ValueError("Ungültige Preisverteilung von der AI")
 
-                return Response({
-                    "recommendation": final_recommendation
-                })
+                    filtered_components = self._get_filtered_components(budget, weight_data)
+                    final_prompt = self._create_final_prompt(budget, requirements, filtered_components)
+                    final_recommendation = self._send_to_lm_studio(final_prompt, is_weight_distribution=False)
 
-            except (requests.exceptions.RequestException, json.JSONDecodeError, ValueError) as e:
-                print(f'Fehler bei der Verarbeitung: {str(e)}')
-                return Response(
-                    {"error": f"Fehler bei der Verarbeitung: {str(e)}"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
+                    return Response({
+                        "recommendation": final_recommendation
+                    })
+                except (requests.exceptions.RequestException, json.JSONDecodeError, ValueError) as e:
+                    print(f"Fehler bei der Verarbeitung: {str(e)}")
+                    if attempt == MAX_RETRIES - 1:
+                        return Response(
+                            {"error": f"Fehler bei der Verarbeitung: {str(e)}"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                        )
 
         except Exception as e:
             print(f'Unerwarteter Fehler: {str(e)}')
@@ -86,7 +96,7 @@ class PCRecommendationView(APIView):
             ],
             "model": "openhermes-2.5-mistral-7b",
             "temperature": 0.3,
-            "max_tokens": 500,
+            "max_tokens": 1200,
             "stop": ["\n\n", "```"],
             "presence_penalty": 0.0,
             "frequency_penalty": 0.0
@@ -136,10 +146,11 @@ class PCRecommendationView(APIView):
             if not all(key in weight_data for key in required_keys):
                 return False
             total = sum(weight_data.values())
-            if not (90 <= total <= 110):
+            if not (85 <= total <= 115):
                 return False
             if weight_data['case'] < 5:
-                return False
+                print("Hinweis: Case-Anteil zu niedrig, setze auf 5%")
+                weight_data['case'] = 5.0
             if not all(v > 0 for v in weight_data.values()):
                 return False
             print("_validate_weight_distribution was True")
@@ -151,14 +162,26 @@ class PCRecommendationView(APIView):
         filtered_components = {}
         for component_type, percentage in weight_data.items():
             target_price = (budget * percentage) / 100
-            min_price = target_price * 0.9
-            max_price = target_price * 1.1
             db_type = self._convert_component_type(component_type)
-            components = Component.objects.filter(
-                type=db_type,
-                price__gte=min_price,
-                price__lte=max_price
-            ).order_by('price')[:15]
+
+            min_count = 8
+            current_range = 0.1
+            max_range = 0.4
+            step = 0.05
+
+            while current_range <= max_range:
+                min_price = target_price * (1 - current_range)
+                max_price = target_price * (1 + current_range)
+                components = Component.objects.filter(
+                    type=db_type,
+                    price__gte=min_price,
+                    price__lte=max_price
+                ).order_by('price')[:min_count]
+
+                if components.count() >= min_count:
+                    break
+                current_range += step
+
             filtered_components[component_type] = [
                 {
                     'name': comp.name,
