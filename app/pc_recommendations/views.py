@@ -8,30 +8,47 @@ import json
 
 
 class PCRecommendationView(APIView):
+    """
+        API view that generates a PC recommendation based on a user's budget and use-case requirements.
+
+        It communicates with a local language model (LM Studio) to calculate a budget allocation and
+        assemble a suitable PC configuration using filtered components from the database.
+    """
     def post(self, request):
+        """
+            Handles the POST request to generate a PC configuration recommendation.
+
+            Retrieves the user-defined budget and requirements from the request,
+            calculates a component weight distribution using the language model,
+            filters components from the database based on that distribution,
+            and sends a final prompt to the model to generate a full build recommendation.
+
+            Returns:
+                Response: A JSON response containing the recommended PC or an error.
+        """
         try:
             budget = request.data.get('budget')
             requirements = request.data.get('requirements')
 
             if not budget or not requirements:
                 return Response(
-                    {"error": "Budget und Anforderungen sind erforderlich"},
+                    {"error": "Budget and requirements are required"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            base_prompt = f"""Du bist ein erfahrener PC-Experte. Erstelle eine prozentuale Budgetverteilung für folgende Anforderungen:
+            base_prompt = f"""You are an experienced PC expert. Create a percentage-based budget distribution for the following requirements:
 
-            - Gesamtbudget: {budget} Euro
-            - Anforderungen: {requirements}
+            - Total budget: {budget} Euros
+            - Requirements: {requirements}
 
-            ⚠️ Wichtig:
-            - Gib **nur ein valides JSON-Objekt** zurück
-            - **Keine zusätzlichen Erklärungen oder Kommentare!**
-            - Alle Werte müssen **Prozente** sein, **keine Euro-Beträge**
-            - Die **Summe ALLER Werte muss exakt 100** betragen – keine Rundungsfehler, keine Abweichungen.
-            - Der Anteil für das Gehäuse (\"case\") muss **mindestens 5%** betragen
+            ⚠️ Important:
+            - Return **only a valid JSON object**
+            - **Do not include any explanations or comments!**
+            - All values must be **percentages**, **not Euro amounts**
+            - The **sum of ALL values must be exactly 100** – no rounding errors, no deviations.
+            - The share for the case (\"case\") must be **at least 5%**
 
-            Beispiel:
+            Example:
 
             {{
               "cpu": 30,
@@ -48,15 +65,15 @@ class PCRecommendationView(APIView):
                 try:
                     prompt = base_prompt
                     if attempt == 1:
-                        prompt += "\n\n// Wiederhole die Berechnung bitte mit einem komplett neuen Gedankengang. Die letzte Summe war nicht exakt 100 – bitte achte diesmal streng darauf, dass die Prozentwerte exakt 100 ergeben, keine Rundungsfehler."
+                        prompt += "\n\n// Please repeat the calculation with a completely new approach. The previous result did not sum up to exactly 100 – this time, make absolutely sure that the percentage values add up to exactly 100, with no rounding errors."
 
                     weight_response = self._send_to_lm_studio(prompt, is_weight_distribution=True)
                     print("after first _send_to_lm_studio")
                     weight_data = extract_json_from_ai(weight_response)
-                    print(f"Daten von der AI: {weight_data}")
+                    print(f"Data from the AI: {weight_data}")
 
                     if not self._validate_weight_distribution(weight_data):
-                        raise ValueError("Ungültige Preisverteilung von der AI")
+                        raise ValueError("Invalid price distribution from the AI")
 
                     filtered_components = self._get_filtered_components(budget, weight_data)
                     final_prompt = self._create_final_prompt(budget, requirements, filtered_components)
@@ -66,28 +83,42 @@ class PCRecommendationView(APIView):
                         "recommendation": final_recommendation
                     })
                 except (requests.exceptions.RequestException, json.JSONDecodeError, ValueError) as e:
-                    print(f"Fehler bei der Verarbeitung: {str(e)}")
+                    print(f"Error during processing: {str(e)}")
                     if attempt == MAX_RETRIES - 1:
                         return Response(
-                            {"error": f"Fehler bei der Verarbeitung: {str(e)}"},
+                            {"error": f"Error during processing: {str(e)}"},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR
                         )
 
         except Exception as e:
-            print(f'Unerwarteter Fehler: {str(e)}')
+            print(f'Unexpected error: {str(e)}')
             return Response(
-                {"error": f"Unerwarteter Fehler: {str(e)}"},
+                {"error": f"Unexpected error: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     def _send_to_lm_studio(self, prompt, is_weight_distribution=True):
+        """
+            Sends a prompt to the local LM Studio model and retrieves the response.
+
+            Args:
+                prompt (str): The prompt to send to the language model.
+                is_weight_distribution (bool): Flag indicating whether the prompt is for budget allocation
+                                                or final component recommendation.
+
+            Returns:
+                str: JSON string extracted from the model's response.
+
+            Raises:
+                ValueError: If the model's response is missing, empty, malformed, or contains no JSON.
+        """
         lm_studio_url = "http://localhost:1234/v1/chat/completions"
         headers = {"Content-Type": "application/json"}
 
         if is_weight_distribution:
-            system_prompt = "Du bist ein erfahrener PC-Experte. Du gibst nur die geforderte Antwort zurück, ohne zusätzliche Erklärungen oder Text. Wenn du eine Preisverteilung zurückgibst, achte darauf, dass die Summe genau 100% ergibt und der Case mindestens 5% beträgt."
+            system_prompt = "You are an experienced PC expert. Only return the required JSON answer, without any additional explanations or text. When providing a budget distribution, make sure the sum is exactly 100% and the case share is at least 5%."
         else:
-            system_prompt = "Du bist ein erfahrener PC-Experte. Analysiere die gegebenen Komponenten und erstelle eine optimale PC-Konfiguration. Gib eine detaillierte, aber präzise Empfehlung zurück, die alle geforderten Punkte abdeckt."
+            system_prompt = "You are an experienced PC expert. Analyze the given components and create an optimal PC build. Provide a detailed but concise recommendation that covers all required aspects."
 
         data = {
             "messages": [
@@ -111,17 +142,17 @@ class PCRecommendationView(APIView):
             response.raise_for_status()
 
             ai_response = response.json()
-            print(f"LM Studio Antwort: {ai_response}")
+            print(f"LM Studio answer: {ai_response}")
             if not ai_response.get('choices'):
-                raise ValueError("Keine Antwort von LM Studio erhalten")
+                raise ValueError("No response received from LM Studio")
 
             message = ai_response['choices'][0].get('message', {})
             if not message or not message.get('content'):
-                raise ValueError("Leere Antwort von LM Studio erhalten")
+                raise ValueError("Empty response received from LM Studio")
 
-            print(f"Verarbeiteter Message aus der Gefiltet wird: {message}")
+            print(f"Processed message to be filtered: {message}")
             content = message['content'].strip()
-            print(f"Verarbeiteter Content: {content}")
+            print(f"Processed content: {content}")
 
             content = content.replace('```json', '').replace('```', '').strip()
             start = content.find('{')
@@ -131,15 +162,27 @@ class PCRecommendationView(APIView):
                 json.loads(json_str)
                 return json_str
             else:
-                raise ValueError("Kein JSON in der Antwort gefunden")
+                raise ValueError("No JSON found in the response")
         except requests.exceptions.RequestException as e:
-            raise ValueError(f"Fehler bei der Kommunikation mit LM Studio: {str(e)}")
+            raise ValueError(f"Error communicating with LM Studio: {str(e)}")
         except json.JSONDecodeError as e:
-            raise ValueError(f"Ungültiges JSON-Format in der Antwort: {str(e)}")
+            raise ValueError(f"Invalid JSON format in the response: {str(e)}")
         except Exception as e:
-            raise ValueError(f"Unerwarteter Fehler bei der Verarbeitung der Antwort: {str(e)}")
+            raise ValueError(f"Unexpected error while processing the response: {str(e)}")
 
     def _validate_weight_distribution(self, weight_data):
+        """
+            Validates the structure and values of the AI-generated budget weight distribution.
+
+            Checks if all required component types are present, all values are positive,
+            and that the total sum is reasonably close to 100%. Also enforces a minimum of 5% for the case.
+
+            Args:
+                weight_data (dict): Dictionary with component types as keys and percentage values.
+
+            Returns:
+                bool: True if valid, otherwise False.
+        """
         try:
             weight_data = {k: float(v) for k, v in weight_data.items()}
             required_keys = ['cpu', 'gpu', 'ram', 'ssd', 'psu', 'case']
@@ -149,7 +192,7 @@ class PCRecommendationView(APIView):
             if not (85 <= total <= 115):
                 return False
             if weight_data['case'] < 5:
-                print("Hinweis: Case-Anteil zu niedrig, setze auf 5%")
+                print("Note: Case share too low, setting it to 5%")
                 weight_data['case'] = 5.0
             if not all(v > 0 for v in weight_data.values()):
                 return False
@@ -159,6 +202,19 @@ class PCRecommendationView(APIView):
             return False
 
     def _get_filtered_components(self, budget, weight_data):
+        """
+        Filters components from the database based on their type and the target price derived
+        from the AI-generated budget allocation.
+
+        Uses dynamic price ranges to find a minimum number of matching components.
+
+        Args:
+            budget (float): Total budget defined by the user.
+            weight_data (dict): Budget distribution per component type (in percentages).
+
+        Returns:
+            dict: A dictionary of component types mapped to lists of filtered components.
+        """
         filtered_components = {}
         for component_type, percentage in weight_data.items():
             target_price = (budget * percentage) / 100
@@ -194,6 +250,16 @@ class PCRecommendationView(APIView):
         return filtered_components
 
     def _convert_component_type(self, type_str):
+        """
+        Converts internal lowercase component type keys to the corresponding
+        database model type names used for filtering.
+
+        Args:
+            type_str (str): Lowercase identifier (e.g., 'cpu', 'gpu').
+
+        Returns:
+            str: Properly capitalized type name matching the database schema.
+        """
         type_map = {
             'cpu': 'CPU',
             'gpu': 'GPU',
@@ -205,52 +271,76 @@ class PCRecommendationView(APIView):
         return type_map.get(type_str.lower(), type_str)
 
     def _create_final_prompt(self, budget, requirements, filtered_components):
+        """
+            Builds the final prompt for the language model to recommend a full PC configuration
+            using only the filtered components.
+
+            Args:
+                budget (float): Total budget for the PC build.
+                requirements (str): User-defined usage goals and preferences.
+                filtered_components (dict): Pre-filtered components grouped by type.
+
+            Returns:
+                str: A formatted prompt ready to be sent to the language model.
+        """
         components_str = ""
         for comp_type, components in filtered_components.items():
-            components_str += f"\n{comp_type.upper()} Komponenten:\n"
+            components_str += f"\n{comp_type.upper()} Components:\n"
             for comp in components:
                 components_str += f"- {comp['name']} ({comp['manufacturer']}) - {comp['price']:.2f}€\n"
             components_str += "\n"
 
-        prompt = f"""Empfehle eine PC-Konfiguration für folgendes:
+        prompt = f"""Recommend a PC configuration based on the following:
 
-- Budget: {budget}€
-- Anforderungen: {requirements}
-- Komponenten (zur Auswahl): {components_str}
+    - Budget: {budget}€
+    - Requirements: {requirements}
+    - Components to choose from: {components_str}
 
-⚠️ WICHTIG:
-- Verwende nur diese Komponenten
-- Gib nur ein valides JSON-Objekt zurück. Keine weiteren Erklärungen.
-- Nur ein einziges 'components'-Feld im JSON!
-- Felder:
-  - \"components\": Liste der gewählten Komponenten mit name + price
-  - \"total_cost\": Gesamtkosten
-  - \"justification\": Begründung
-  - \"adjustments\": Was tun, wenn Budget zu niedrig ist?
-  - \"alternatives\": Optionale Alternativen
+    ⚠️ IMPORTANT:
+    - Use only the provided components
+    - Return only a valid JSON object. No additional explanations.
+    - Only one 'components' field in the JSON!
+    - Fields:
+      - \"components\": List of selected components with name + price
+      - \"total_cost\": Total cost
+      - \"justification\": Reasoning
+      - \"adjustments\": What to change if the budget is too low?
+      - \"alternatives\": Optional alternatives
 
-📌 Beispiel:
+    📌 Example:
 
-{{
-  \"components\": [
-    {{ \"name\": \"Intel i5\", \"price\": 200 }},
-    {{ \"name\": \"GTX 1660\", \"price\": 300 }}
-  ],
-  \"total_cost\": 500,
-  \"justification\": \"Stabile Performance für Programmieren.\",
-  \"adjustments\": \"RAM oder SSD verkleinern.\",
-  \"alternatives\": \"Ryzen 5 statt Intel i5\"
-}}
-"""
+    {{
+      \"components\": [
+        {{ \"name\": \"Intel i5\", \"price\": 200 }},
+        {{ \"name\": \"GTX 1660\", \"price\": 300 }}
+      ],
+      \"total_cost\": 500,
+      \"justification\": \"Solid performance for programming.\",
+      \"adjustments\": \"Reduce RAM or SSD size.\",
+      \"alternatives\": \"Ryzen 5 instead of Intel i5\"
+    }}
+    """
         return prompt
 
 
 def extract_json_from_ai(content: str):
+    """
+    Extracts the first JSON object found in a raw AI response string.
+
+    Args:
+        content (str): Raw string returned by the language model.
+
+    Returns:
+        dict: Parsed JSON data.
+
+    Raises:
+        ValueError: If no JSON object is found or parsing fails.
+    """
     try:
         json_match = re.search(r'\{.*\}', content, re.DOTALL)
         if not json_match:
-            raise ValueError("Kein JSON-Objekt gefunden")
+            raise ValueError("No JSON object found")
         json_str = json_match.group()
         return json.loads(json_str)
     except Exception as e:
-        raise ValueError(f"Fehler beim Extrahieren des JSONs: {e}")
+        raise ValueError(f"Error while extracting JSON: {e}")
