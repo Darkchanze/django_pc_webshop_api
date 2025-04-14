@@ -1,20 +1,20 @@
-from django.core.management.base import BaseCommand
 from pc_components.models import Component, Pc, Pc_Components
+from django.core.management.base import BaseCommand
 
 class Command(BaseCommand):
-    help = 'Löscht alle Daten aus der Datenbank'
+    help = 'Deletes all data from the database'
 
     def handle(self, *args, **options):
-        # Lösche alle PC-Komponenten-Beziehungen
+        # Delete all PC-component relationships
         Pc_Components.objects.all().delete()
-        self.stdout.write(self.style.SUCCESS('Alle PC-Komponenten-Beziehungen gelöscht'))
+        self.stdout.write(self.style.SUCCESS('All PC-component relationships deleted'))
 
-        # Lösche alle PCs
+        # Delete all PCs
         Pc.objects.all().delete()
-        self.stdout.write(self.style.SUCCESS('Alle PCs gelöscht'))
+        self.stdout.write(self.style.SUCCESS('All PCs deleted'))
 
-        # Lösche alle Komponenten
+        # Delete all components
         Component.objects.all().delete()
-        self.stdout.write(self.style.SUCCESS('Alle Komponenten gelöscht'))
+        self.stdout.write(self.style.SUCCESS('All components deleted'))
 
-        self.stdout.write(self.style.SUCCESS('Datenbank erfolgreich geleert')) 
+        self.stdout.write(self.style.SUCCESS('Database successfully cleared'))
