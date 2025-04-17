@@ -1,8 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-import requests
 from pc_components.models import Component
+import requests
 import re
 import json
 import openai
@@ -11,22 +11,24 @@ import os
 
 class PCRecommendationView(APIView):
     """
-        API view that generates a PC recommendation based on a user's budget and use-case requirements.
+    API endpoint for generating a custom PC build recommendation.
 
-        It communicates with a local language model (LM Studio) to calculate a budget allocation and
-        assemble a suitable PC configuration using filtered components from the database.
+    This view receives a budget and user requirements, calculates an optimal component budget distribution,
+    filters compatible components from the database, and queries a language model to generate a valid PC configuration.
     """
     def post(self, request):
         """
-            Handles the POST request to generate a PC configuration recommendation.
+        Handles the incoming POST request to generate a PC recommendation.
 
-            Retrieves the user-defined budget and requirements from the request,
-            calculates a component weight distribution using the language model,
-            filters components from the database based on that distribution,
-            and sends a final prompt to the model to generate a full build recommendation.
+        Steps:
+        1. Validates that both budget and requirements are present in the request.
+        2. Sends a prompt to OpenAI to calculate percentage-based budget allocation.
+        3. Filters components from the database based on that allocation.
+        4. Sends a second prompt to generate the final PC build.
+        5. Returns the recommendation as a JSON response.
 
-            Returns:
-                Response: A JSON response containing the recommended PC or an error.
+        Returns:
+            Response: A JSON response with either the PC build or an error message.
         """
         try:
             budget = request.data.get('budget')
@@ -103,9 +105,24 @@ class PCRecommendationView(APIView):
 
     def _send_to_lm_studio(self, prompt, is_weight_distribution=True):
         """
-        Sends a prompt to OpenAI ChatGPT 3.5 API and retrieves the response.
+        Sends a prompt to the OpenAI ChatGPT API and returns the model's JSON-formatted response.
+
+        Args:
+            prompt (str): The user prompt to send to the model.
+            is_weight_distribution (bool): If True, uses a prompt to get percentage allocation.
+                                           If False, generates a full PC build.
+
+        Returns:
+            str: JSON string extracted from the model's response.
+
+        Raises:
+            ValueError: If the response is empty or invalid, or if parsing fails.
         """
-        openai.api_key = os.getenv("OPENAI_API_KEY")
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("Missing OpenAI API Key in environment variables.")
+
+        openai.api_key = api_key
 
         system_prompt = (
             "You are an experienced PC expert. Only return the required JSON answer, "
@@ -143,24 +160,27 @@ class PCRecommendationView(APIView):
 
     def _validate_weight_distribution(self, weight_data):
         """
-            Validates the structure and values of the AI-generated budget weight distribution.
+        Validates the AI-generated budget allocation for PC components.
 
-            Checks if all required component types are present, all values are positive,
-            and that the total sum is reasonably close to 100%. Also enforces a minimum of 5% for the case.
+        Ensures:
+        - All required component keys are present.
+        - All values are positive numbers.
+        - Total percentage equals exactly 100 (±15% tolerance).
+        - The case percentage is at least 5%.
 
-            Args:
-                weight_data (dict): Dictionary with component types as keys and percentage values.
+        Args:
+            weight_data (dict): Dictionary with component percentages.
 
-            Returns:
-                bool: True if valid, otherwise False.
+        Returns:
+            bool: True if the distribution is valid, False otherwise.
         """
         try:
             weight_data = {k: float(v) for k, v in weight_data.items()}
-            required_keys = ['cpu', 'gpu', 'ram', 'ssd', 'psu', 'case']
+            required_keys = ['cpu', 'gpu', 'ram', 'ssd', 'psu', 'case', 'motherboard', 'cooler']
             if not all(key in weight_data for key in required_keys):
                 return False
             total = sum(weight_data.values())
-            if not (85 <= total <= 115):
+            if not (90 <= total <= 110):
                 return False
             if weight_data['case'] < 5:
                 print("Note: Case share too low, setting it to 5%")
@@ -173,17 +193,17 @@ class PCRecommendationView(APIView):
 
     def _get_filtered_components(self, budget, weight_data):
         """
-        Filters components from the database based on their type and the target price derived
-        from the AI-generated budget allocation.
+        Filters PC components from the database based on price allocation per component type.
 
-        Uses dynamic price ranges to find a minimum number of matching components.
+        Uses an expanding price range to ensure that at least 8 components are found for each type.
+        Returns a dictionary of filtered and pre-validated component options.
 
         Args:
-            budget (float): Total budget defined by the user.
-            weight_data (dict): Budget distribution per component type (in percentages).
+            budget (float): Total user budget.
+            weight_data (dict): Percentage allocation per component type.
 
         Returns:
-            dict: A dictionary of component types mapped to lists of filtered components.
+            dict: Mapping from component type (str) to list of matching components (dicts).
         """
         filtered_components = {}
 
@@ -221,6 +241,15 @@ class PCRecommendationView(APIView):
         return filtered_components
 
     def _convert_component_type(self, type_str):
+        """
+        Maps internal AI component type names to database-compatible type strings.
+
+        Args:
+            type_str (str): AI component type name (e.g., 'gpu', 'psu').
+
+        Returns:
+            str: Matching database type name (e.g., 'GPU', 'Power Supply').
+        """
         type_map = {
             'cpu': 'CPU',
             'gpu': 'GPU',
@@ -235,16 +264,21 @@ class PCRecommendationView(APIView):
 
     def _create_final_prompt(self, budget, requirements, filtered_components):
         """
-            Builds the final prompt for the language model to recommend a full PC configuration
-            using only the filtered components.
+        Constructs the final prompt to send to OpenAI to generate a full PC build.
 
-            Args:
-                budget (float): Total budget for the PC build.
-                requirements (str): User-defined usage goals and preferences.
-                filtered_components (dict): Pre-filtered components grouped by type.
+        Includes:
+        - Budget
+        - Requirements
+        - List of filtered components
+        - JSON format template the model must return
 
-            Returns:
-                str: A formatted prompt ready to be sent to the language model.
+        Args:
+            budget (float): User-defined budget.
+            requirements (str): Usage scenario or preferences.
+            filtered_components (dict): Dict of filtered components per type.
+
+        Returns:
+            str: Fully formatted prompt to send to the model.
         """
         components_str = ""
         for comp_type, components in filtered_components.items():
@@ -252,10 +286,9 @@ class PCRecommendationView(APIView):
             for comp in components:
                 components_str += f"- {comp['name']} ({comp['manufacturer']}) - {comp['price']:.2f}€\n"
             components_str += "\n"
-
         prompt = f"""You are a professional PC builder.
 
-        Your task is to recommend a **complete PC build** using **exactly one component from each category**:
+        Your task is to recommend a **complete PC build** using **exactly one component from each of the following categories**:
         - CPU
         - GPU
         - RAM
@@ -265,29 +298,30 @@ class PCRecommendationView(APIView):
         - Motherboard
         - Cooler
 
-        🛑 Constraints:
+        🛑 **STRICT RULES**:
         - Total budget: {budget}€
         - Use case: {requirements}
         - Components must be chosen **only from the list below**
+        - All 8 components must be included – none may be skipped
         - All components must be **fully compatible**
-        - Total cost must **not exceed** the budget
-        - You must return a **valid JSON object only** – no extra text or explanation
+        - Total cost must be as close to the budget as possible (within 2–5%), without exceeding it
+        - You must return **only a valid JSON object** – no extra text or explanation
 
         📦 JSON format (must match exactly):
 
         {{
           "components": [
-            {{ "name": "Intel Core i5-12400F", "price": 180.00 }},
-            {{ "name": "ZOTAC RTX 3060 Twin Edge OC 12GB", "price": 330.00 }},
-            {{ "name": "Corsair Vengeance LPX 16GB DDR4", "price": 65.00 }},
-            {{ "name": "Samsung 980 1TB NVMe SSD", "price": 100.00 }},
-            {{ "name": "Corsair CV650 650W PSU", "price": 65.00 }},
-            {{ "name": "NZXT H510 Mid Tower Case", "price": 70.00 }},
-            {{ "name": "MSI B660M Mortar Motherboard", "price": 110.00 }},
-            {{ "name": "Cooler Master Hyper 212 Black Edition", "price": 40.00 }}
+            {{ "name": "Example CPU", "price": 250.00 }},
+            {{ "name": "Example GPU", "price": 400.00 }},
+            {{ "name": "Example RAM", "price": 120.00 }},
+            {{ "name": "Example SSD", "price": 100.00 }},
+            {{ "name": "Example PSU", "price": 80.00 }},
+            {{ "name": "Example Case", "price": 70.00 }},
+            {{ "name": "Example Motherboard", "price": 130.00 }},
+            {{ "name": "Example Cooler", "price": 50.00 }}
           ],
-          "total_cost": 960.00,
-          "justification": "Balanced 1080p gaming setup with strong CPU/GPU combo, fast storage, and reliable components."
+          "total_cost": 1200.00,
+          "justification": "Explain briefly why these components were selected."
         }}
 
         Available components to choose from:
@@ -299,16 +333,16 @@ class PCRecommendationView(APIView):
 
 def extract_json_from_ai(content: str):
     """
-    Extracts the first JSON object found in a raw AI response string.
+    Extracts the first valid JSON object from a raw string returned by a language model.
 
     Args:
-        content (str): Raw string returned by the language model.
+        content (str): Raw response text from the AI.
 
     Returns:
-        dict: Parsed JSON data.
+        dict: Parsed JSON object.
 
     Raises:
-        ValueError: If no JSON object is found or parsing fails.
+        ValueError: If extraction or JSON parsing fails.
     """
     try:
         json_match = re.search(r'\{.*\}', content, re.DOTALL)
