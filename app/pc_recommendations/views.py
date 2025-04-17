@@ -5,6 +5,8 @@ import requests
 from pc_components.models import Component
 import re
 import json
+import openai
+import os
 
 
 class PCRecommendationView(APIView):
@@ -36,27 +38,31 @@ class PCRecommendationView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            base_prompt = f"""You are an experienced PC expert. Create a percentage-based budget distribution for the following requirements:
+            base_prompt = f"""You are an experienced PC expert. Create a percentage-based budget distribution for a custom PC build based on the following:
 
             - Total budget: {budget} Euros
             - Requirements: {requirements}
 
-            ⚠️ Important:
-            - Return **only a valid JSON object**
-            - **Do not include any explanations or comments!**
-            - All values must be **percentages**, **not Euro amounts**
-            - The **sum of ALL values must be exactly 100** – no rounding errors, no deviations.
-            - The share for the case (\"case\") must be **at least 5%**
+            ⚠️ STRICT INSTRUCTIONS:
+            - Return only a valid JSON object – absolutely no comments, explanation, or extra formatting
+            - Use exactly these 8 component types as keys:
+              "cpu", "gpu", "ram", "ssd", "psu", "case", "motherboard", "cooler"
+            - The sum of all values must be **exactly 100** (as percentages) – no rounding errors
+            - All values must be positive numbers
+            - The share for "case" must be at least 5%
+            - Do not include extra keys like "monitor", "keyboard", "others", etc.
 
-            Example:
+            📦 Example format (structure must match exactly):
 
             {{
-              "cpu": 30,
+              "cpu": 25,
               "gpu": 30,
               "ram": 15,
               "ssd": 10,
-              "psu": 10,
-              "case": 5
+              "psu": 7,
+              "case": 5,
+              "motherboard": 5,
+              "cooler": 3
             }}
             """
 
@@ -66,11 +72,9 @@ class PCRecommendationView(APIView):
                     prompt = base_prompt
                     if attempt == 1:
                         prompt += "\n\n// Please repeat the calculation with a completely new approach. The previous result did not sum up to exactly 100 – this time, make absolutely sure that the percentage values add up to exactly 100, with no rounding errors."
-
                     weight_response = self._send_to_lm_studio(prompt, is_weight_distribution=True)
-                    print("after first _send_to_lm_studio")
                     weight_data = extract_json_from_ai(weight_response)
-                    print(f"Data from the AI: {weight_data}")
+
 
                     if not self._validate_weight_distribution(weight_data):
                         raise ValueError("Invalid price distribution from the AI")
@@ -99,76 +103,43 @@ class PCRecommendationView(APIView):
 
     def _send_to_lm_studio(self, prompt, is_weight_distribution=True):
         """
-            Sends a prompt to the local LM Studio model and retrieves the response.
-
-            Args:
-                prompt (str): The prompt to send to the language model.
-                is_weight_distribution (bool): Flag indicating whether the prompt is for budget allocation
-                                                or final component recommendation.
-
-            Returns:
-                str: JSON string extracted from the model's response.
-
-            Raises:
-                ValueError: If the model's response is missing, empty, malformed, or contains no JSON.
+        Sends a prompt to OpenAI ChatGPT 3.5 API and retrieves the response.
         """
-        lm_studio_url = "http://localhost:1234/v1/chat/completions"
-        headers = {"Content-Type": "application/json"}
+        openai.api_key = os.getenv("OPENAI_API_KEY")
 
-        if is_weight_distribution:
-            system_prompt = "You are an experienced PC expert. Only return the required JSON answer, without any additional explanations or text. When providing a budget distribution, make sure the sum is exactly 100% and the case share is at least 5%."
-        else:
-            system_prompt = "You are an experienced PC expert. Analyze the given components and create an optimal PC build. Provide a detailed but concise recommendation that covers all required aspects."
-
-        data = {
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ],
-            "model": "openhermes-2.5-mistral-7b",
-            "temperature": 0.3,
-            "max_tokens": 1200,
-            "stop": ["\n\n", "```"],
-            "presence_penalty": 0.0,
-            "frequency_penalty": 0.0
-        }
+        system_prompt = (
+            "You are an experienced PC expert. Only return the required JSON answer, "
+            "without any additional explanations or text. When providing a budget distribution, "
+            "make sure the sum is exactly 100% and the case share is at least 5%."
+            if is_weight_distribution else
+            "You are an experienced PC expert. Analyze the given components and create an optimal PC build. "
+            "Provide a detailed but concise recommendation that covers all required aspects."
+        )
 
         try:
-            print(f"This is your prompt from the user : {prompt}")
-            print(f"this is your system prompt : {system_prompt}")
-            print(f"this is your data : {data}")
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=1200
+            )
 
-            response = requests.post(lm_studio_url, headers=headers, json=data, timeout=60)
-            response.raise_for_status()
-
-            ai_response = response.json()
-            print(f"LM Studio answer: {ai_response}")
-            if not ai_response.get('choices'):
-                raise ValueError("No response received from LM Studio")
-
-            message = ai_response['choices'][0].get('message', {})
-            if not message or not message.get('content'):
-                raise ValueError("Empty response received from LM Studio")
-
-            print(f"Processed message to be filtered: {message}")
-            content = message['content'].strip()
-            print(f"Processed content: {content}")
-
+            content = response['choices'][0]['message']['content']
             content = content.replace('```json', '').replace('```', '').strip()
             start = content.find('{')
             end = content.rfind('}') + 1
+
             if start != -1 and end != 0:
                 json_str = content[start:end]
-                json.loads(json_str)
+                json.loads(json_str)  # Test for valid JSON
                 return json_str
             else:
                 raise ValueError("No JSON found in the response")
-        except requests.exceptions.RequestException as e:
-            raise ValueError(f"Error communicating with LM Studio: {str(e)}")
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON format in the response: {str(e)}")
         except Exception as e:
-            raise ValueError(f"Unexpected error while processing the response: {str(e)}")
+            raise ValueError(f"OpenAI API Error: {e}")
 
     def _validate_weight_distribution(self, weight_data):
         """
@@ -196,7 +167,6 @@ class PCRecommendationView(APIView):
                 weight_data['case'] = 5.0
             if not all(v > 0 for v in weight_data.values()):
                 return False
-            print("_validate_weight_distribution was True")
             return True
         except (ValueError, TypeError):
             return False
@@ -216,9 +186,11 @@ class PCRecommendationView(APIView):
             dict: A dictionary of component types mapped to lists of filtered components.
         """
         filtered_components = {}
+
         for component_type, percentage in weight_data.items():
             target_price = (budget * percentage) / 100
             db_type = self._convert_component_type(component_type)
+
 
             min_count = 8
             current_range = 0.1
@@ -246,29 +218,20 @@ class PCRecommendationView(APIView):
                 }
                 for comp in components
             ]
-        print(filtered_components)
         return filtered_components
 
     def _convert_component_type(self, type_str):
-        """
-        Converts internal lowercase component type keys to the corresponding
-        database model type names used for filtering.
-
-        Args:
-            type_str (str): Lowercase identifier (e.g., 'cpu', 'gpu').
-
-        Returns:
-            str: Properly capitalized type name matching the database schema.
-        """
         type_map = {
             'cpu': 'CPU',
             'gpu': 'GPU',
             'ram': 'RAM',
             'ssd': 'Storage',
             'psu': 'Power Supply',
-            'case': 'Case'
+            'case': 'Case',
+            'motherboard': 'Motherboard',
+            'cooler': 'Cooler'
         }
-        return type_map.get(type_str.lower(), type_str)
+        return type_map.get(type_str.lower())
 
     def _create_final_prompt(self, budget, requirements, filtered_components):
         """
@@ -290,36 +253,47 @@ class PCRecommendationView(APIView):
                 components_str += f"- {comp['name']} ({comp['manufacturer']}) - {comp['price']:.2f}€\n"
             components_str += "\n"
 
-        prompt = f"""Recommend a PC configuration based on the following:
+        prompt = f"""You are a professional PC builder.
 
-    - Budget: {budget}€
-    - Requirements: {requirements}
-    - Components to choose from: {components_str}
+        Your task is to recommend a **complete PC build** using **exactly one component from each category**:
+        - CPU
+        - GPU
+        - RAM
+        - SSD
+        - PSU
+        - Case
+        - Motherboard
+        - Cooler
 
-    ⚠️ IMPORTANT:
-    - Use only the provided components
-    - Return only a valid JSON object. No additional explanations.
-    - Only one 'components' field in the JSON!
-    - Fields:
-      - \"components\": List of selected components with name + price
-      - \"total_cost\": Total cost
-      - \"justification\": Reasoning
-      - \"adjustments\": What to change if the budget is too low?
-      - \"alternatives\": Optional alternatives
+        🛑 Constraints:
+        - Total budget: {budget}€
+        - Use case: {requirements}
+        - Components must be chosen **only from the list below**
+        - All components must be **fully compatible**
+        - Total cost must **not exceed** the budget
+        - You must return a **valid JSON object only** – no extra text or explanation
 
-    📌 Example:
+        📦 JSON format (must match exactly):
 
-    {{
-      \"components\": [
-        {{ \"name\": \"Intel i5\", \"price\": 200 }},
-        {{ \"name\": \"GTX 1660\", \"price\": 300 }}
-      ],
-      \"total_cost\": 500,
-      \"justification\": \"Solid performance for programming.\",
-      \"adjustments\": \"Reduce RAM or SSD size.\",
-      \"alternatives\": \"Ryzen 5 instead of Intel i5\"
-    }}
-    """
+        {{
+          "components": [
+            {{ "name": "Intel Core i5-12400F", "price": 180.00 }},
+            {{ "name": "ZOTAC RTX 3060 Twin Edge OC 12GB", "price": 330.00 }},
+            {{ "name": "Corsair Vengeance LPX 16GB DDR4", "price": 65.00 }},
+            {{ "name": "Samsung 980 1TB NVMe SSD", "price": 100.00 }},
+            {{ "name": "Corsair CV650 650W PSU", "price": 65.00 }},
+            {{ "name": "NZXT H510 Mid Tower Case", "price": 70.00 }},
+            {{ "name": "MSI B660M Mortar Motherboard", "price": 110.00 }},
+            {{ "name": "Cooler Master Hyper 212 Black Edition", "price": 40.00 }}
+          ],
+          "total_cost": 960.00,
+          "justification": "Balanced 1080p gaming setup with strong CPU/GPU combo, fast storage, and reliable components."
+        }}
+
+        Available components to choose from:
+
+        {components_str}
+        """
         return prompt
 
 

@@ -6,7 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="2bb06f76-5ad4-4d11-a4e3-b940be52b52e" name="Changes" comment="requirements">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/pc_components/management/commands/import_components.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/pc_components/management/commands/import_components.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/data/pc_data/StorageSSD.csv" beforeDir="false" afterPath="$PROJECT_DIR$/app/data/pc_data/StorageSSD.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/pc_recommendations/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/pc_recommendations/views.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,32 +50,33 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;Django Server.django-rest-starter-kit.executor&quot;: &quot;Run&quot;,
-    &quot;Python.Django Debug.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.OpenDjangoStructureViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;deployment&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/Python Projects/django_pc_webshop_api/app/data&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;terminal&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "Django Server.django-rest-starter-kit.executor": "Run",
+    "Python.Django Debug.executor": "Run",
+    "RunOnceActivity.OpenDjangoStructureViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "deployment",
+    "last_opened_file_path": "D:/Python Projects/django_pc_webshop_api/app/data/pc_data",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "terminal",
+    "vue.rearranger.settings.migration": "true"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
-      &quot;Markdown&quot;
+  "keyToStringList": {
+    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
+      "Markdown"
     ]
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\Python Projects\django_pc_webshop_api\app\data\pc_data" />
       <recent name="D:\Python Projects\django_pc_webshop_api\app\data" />
       <recent name="D:\Python Projects\django_pc_webshop_api\app\orders" />
       <recent name="D:\Python Projects\django_pc_webshop_api\app\users" />
