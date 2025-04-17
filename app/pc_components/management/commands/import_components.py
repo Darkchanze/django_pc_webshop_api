@@ -43,7 +43,7 @@ class Command(BaseCommand):
                 for row in reader:
                     try:
                         # Extract name and price depending on file type
-                        if filename in ['cabinates.csv', 'PowerSupply.csv']:
+                        if filename in ['cabinates.csv', 'PowerSupply.csv', 'StorageSSD.csv']:
                             full_name = row[0].strip()
                             price_str = row[1].strip()
                         else:
