@@ -82,6 +82,11 @@ class PCRecommendationView(APIView):
                         raise ValueError("Invalid price distribution from the AI")
 
                     filtered_components = self._get_filtered_components(budget, weight_data)
+                    print("[DEBUG] Filtered Components:")
+                    for key, comps in filtered_components.items():
+                        print(f"  {key.upper()}:")
+                        for c in comps:
+                            print(f"    - {c['name']} | {c['price']}€")
                     final_prompt = self._create_final_prompt(budget, requirements, filtered_components)
                     final_recommendation = self._send_to_lm_studio(final_prompt, is_weight_distribution=False)
 
@@ -135,7 +140,7 @@ class PCRecommendationView(APIView):
 
         try:
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
@@ -196,7 +201,7 @@ class PCRecommendationView(APIView):
         Filters PC components from the database based on price allocation per component type.
 
         Uses an expanding price range to ensure that at least 8 components are found for each type.
-        Returns a dictionary of filtered and pre-validated component options.
+        Removes duplicates to ensure variety in the final prompt.
 
         Args:
             budget (float): Total user budget.
@@ -211,10 +216,9 @@ class PCRecommendationView(APIView):
             target_price = (budget * percentage) / 100
             db_type = self._convert_component_type(component_type)
 
-
             min_count = 8
             current_range = 0.1
-            max_range = 0.4
+            max_range = 0.6
             step = 0.05
 
             while current_range <= max_range:
@@ -224,20 +228,26 @@ class PCRecommendationView(APIView):
                     type=db_type,
                     price__gte=min_price,
                     price__lte=max_price
-                ).order_by('price')[:min_count]
+                ).order_by('price')[:50]
 
-                if components.count() >= min_count:
+                unique_components = self._remove_duplicates([
+                    {
+                        'name': comp.name,
+                        'manufacturer': comp.manufacturer,
+                        'price': float(comp.price)
+                    }
+                    for comp in components
+                ])
+
+                if len(unique_components) >= min_count:
+                    filtered_components[component_type] = unique_components[:min_count]
                     break
+
                 current_range += step
 
-            filtered_components[component_type] = [
-                {
-                    'name': comp.name,
-                    'manufacturer': comp.manufacturer,
-                    'price': float(comp.price)
-                }
-                for comp in components
-            ]
+            if component_type not in filtered_components:
+                filtered_components[component_type] = unique_components[:min_count]
+
         return filtered_components
 
     def _convert_component_type(self, type_str):
@@ -261,6 +271,16 @@ class PCRecommendationView(APIView):
             'cooler': 'Cooler'
         }
         return type_map.get(type_str.lower())
+
+    def _remove_duplicates(self, components_list):
+        seen = set()
+        unique = []
+        for comp in components_list:
+            identifier = comp['name'].lower()
+            if identifier not in seen:
+                seen.add(identifier)
+                unique.append(comp)
+        return unique
 
     def _create_final_prompt(self, budget, requirements, filtered_components):
         """
@@ -298,14 +318,21 @@ class PCRecommendationView(APIView):
         - Motherboard
         - Cooler
 
-        🛑 **STRICT RULES**:
+        🛑 STRICT RULES:
         - Total budget: {budget}€
         - Use case: {requirements}
         - Components must be chosen **only from the list below**
         - All 8 components must be included – none may be skipped
         - All components must be **fully compatible**
+        - CPU and motherboard must have the **same socket** (e.g., AM4 with AM4, LGA1700 with LGA1700)
+        - Do **not mix** AMD CPUs with Intel motherboards, or Intel CPUs with AMD motherboards
+        - RAM must be compatible with the motherboard (e.g., DDR4 not on DDR3-only boards)
+        - PSU must be powerful enough for the selected GPU and CPU
+        - Intel 12th/13th Gen CPUs (e.g., i5-12600K, i7-13700K) **should preferably be paired with motherboards like H610, B660, Z690 etc.**
+          – use older chipsets like B560 only if no better match is available and compatibility is guaranteed
         - Total cost must be as close to the budget as possible (within 2–5%), without exceeding it
         - You must return **only a valid JSON object** – no extra text or explanation
+
 
         📦 JSON format (must match exactly):
 

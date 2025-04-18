@@ -21,7 +21,8 @@ class Command(BaseCommand):
             'RAM.csv': 'RAM',
             'StorageSSD.csv': 'Storage',
             'PowerSupply.csv': 'Power Supply',
-            'cabinates.csv': 'Case'
+            'cabinates.csv': 'Case',
+            'Cooler.csv': 'Cooler'
         }
 
         # Base directory for CSV files
@@ -43,7 +44,7 @@ class Command(BaseCommand):
                 for row in reader:
                     try:
                         # Extract name and price depending on file type
-                        if filename in ['cabinates.csv', 'PowerSupply.csv', 'StorageSSD.csv']:
+                        if filename in ['cabinates.csv', 'PowerSupply.csv', 'StorageSSD.csv', 'Cooler.csv']:
                             full_name = row[0].strip()
                             price_str = row[1].strip()
                         else:
