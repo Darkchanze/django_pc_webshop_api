@@ -7,6 +7,7 @@ import re
 import json
 import openai
 import os
+from django.db.models.functions import Random
 
 
 class PCRecommendationView(APIView):
@@ -16,6 +17,7 @@ class PCRecommendationView(APIView):
     This view receives a budget and user requirements, calculates an optimal component budget distribution,
     filters compatible components from the database, and queries a language model to generate a valid PC configuration.
     """
+
     def post(self, request):
         """
         Handles the incoming POST request to generate a PC recommendation.
@@ -25,7 +27,8 @@ class PCRecommendationView(APIView):
         2. Sends a prompt to OpenAI to calculate percentage-based budget allocation.
         3. Filters components from the database based on that allocation.
         4. Sends a second prompt to generate the final PC build.
-        5. Returns the recommendation as a JSON response.
+        5. If no valid build is found, retries with new components (max 4 times).
+        6. Returns the recommendation as a JSON response.
 
         Returns:
             Response: A JSON response with either the PC build or an error message.
@@ -77,22 +80,37 @@ class PCRecommendationView(APIView):
                     weight_response = self._send_to_lm_studio(prompt, is_weight_distribution=True)
                     weight_data = extract_json_from_ai(weight_response)
 
-
                     if not self._validate_weight_distribution(weight_data):
                         raise ValueError("Invalid price distribution from the AI")
 
-                    filtered_components = self._get_filtered_components(budget, weight_data)
-                    print("[DEBUG] Filtered Components:")
-                    for key, comps in filtered_components.items():
-                        print(f"  {key.upper()}:")
-                        for c in comps:
-                            print(f"    - {c['name']} | {c['price']}€")
-                    final_prompt = self._create_final_prompt(budget, requirements, filtered_components)
-                    final_recommendation = self._send_to_lm_studio(final_prompt, is_weight_distribution=False)
+                    build_attempts = 4
+                    for build_try in range(build_attempts):
+                        filtered_components = self._get_filtered_components(budget, weight_data)
+                        print("[DEBUG] Filtered Components:")
+                        for key, comps in filtered_components.items():
+                            print(f"  {key.upper()}:")
+                            for c in comps:
+                                print(f"    - {c['name']} | {c['price']}€")
 
-                    return Response({
-                        "recommendation": final_recommendation
-                    })
+                        final_prompt = self._create_final_prompt(budget, requirements, filtered_components)
+                        final_recommendation = self._send_to_lm_studio(final_prompt, is_weight_distribution=False)
+
+                        try:
+                            parsed = extract_json_from_ai(final_recommendation)
+                        except ValueError:
+                            parsed = {}
+
+                        if "error" in parsed and parsed["error"] == "NO_VALID_BUILD":
+                            if build_try < build_attempts - 1:
+                                continue  # retry with new components
+                            else:
+                                return Response(
+                                    {"error": "AI could not create a valid build after multiple attempts."},
+                                    status=status.HTTP_424_FAILED_DEPENDENCY
+                                )
+                        else:
+                            return Response({"recommendation": final_recommendation})
+
                 except (requests.exceptions.RequestException, json.JSONDecodeError, ValueError) as e:
                     print(f"Error during processing: {str(e)}")
                     if attempt == MAX_RETRIES - 1:
@@ -228,7 +246,7 @@ class PCRecommendationView(APIView):
                     type=db_type,
                     price__gte=min_price,
                     price__lte=max_price
-                ).order_by('price')[:50]
+                ).order_by(Random())[:50]
 
                 unique_components = self._remove_duplicates([
                     {
@@ -328,8 +346,8 @@ class PCRecommendationView(APIView):
         - Do **not mix** AMD CPUs with Intel motherboards, or Intel CPUs with AMD motherboards
         - RAM must be compatible with the motherboard (e.g., DDR4 not on DDR3-only boards)
         - PSU must be powerful enough for the selected GPU and CPU
-        - Intel 12th/13th Gen CPUs (e.g., i5-12600K, i7-13700K) **should preferably be paired with motherboards like H610, B660, Z690 etc.**
-          – use older chipsets like B560 only if no better match is available and compatibility is guaranteed
+        - Intel 12th/13th Gen CPUs (e.g., i5-12600K, i7-13700K) may only be paired with motherboards that officially support these generations, such as H610, B660, Z690, Z790, etc.
+        - Do not use older chipsets like B560, B460, or H510 with 12th/13th Gen CPUs under any circumstances – they are not compatible out of the box and must be strictly avoided.
         - Total cost must be as close to the budget as possible (within 2–5%), without exceeding it
         - You must return **only a valid JSON object** – no extra text or explanation
 
@@ -350,6 +368,12 @@ class PCRecommendationView(APIView):
           "total_cost": 1200.00,
           "justification": "Explain briefly why these components were selected."
         }}
+        
+        IF no valid combination of 8 compatible components exists, return the following instead:
+        {{
+          "error": "NO_VALID_BUILD"
+        }}
+        Do not try to guess or work around this. Only return that exact JSON object if compatibility is impossible.
 
         Available components to choose from:
 
