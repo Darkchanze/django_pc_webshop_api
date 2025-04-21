@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from pc_components.models import Component
+from pc_components.models import Component, Pc
 import requests
 import re
 import json
@@ -109,6 +109,7 @@ class PCRecommendationView(APIView):
                                     status=status.HTTP_424_FAILED_DEPENDENCY
                                 )
                         else:
+                            self._save_created_pc_to_database(parsed)
                             return Response({"recommendation": final_recommendation})
 
                 except (requests.exceptions.RequestException, json.JSONDecodeError, ValueError) as e:
@@ -350,11 +351,14 @@ class PCRecommendationView(APIView):
         - Do not use older chipsets like B560, B460, or H510 with 12th/13th Gen CPUs under any circumstances – they are not compatible out of the box and must be strictly avoided.
         - Total cost must be as close to the budget as possible (within 2–5%), without exceeding it
         - You must return **only a valid JSON object** – no extra text or explanation
+        - Add a short and unique name to the build (1–3 words). It should be creative, relevant, and cool (e.g., "ShadowForge", "BudgetBeast", "ZenStreamX")
+        - Return it as a string in a "name" field at the beginning of the JSON
 
 
         📦 JSON format (must match exactly):
 
         {{
+          "name": "ShadowForge",
           "components": [
             {{ "name": "Example CPU", "price": 250.00 }},
             {{ "name": "Example GPU", "price": 400.00 }},
@@ -380,6 +384,54 @@ class PCRecommendationView(APIView):
         {components_str}
         """
         return prompt
+
+    def _save_created_pc_to_database(self, new_pc_data):
+        """
+        Saves a newly generated PC build to the database.
+
+        This method receives a parsed JSON object from the AI recommendation,
+        checks if the suggested PC name is unique, and creates a new `Pc` entry
+        with all selected components. If the name already exists, a numeric suffix
+        is appended to ensure uniqueness.
+
+        Args:
+            new_pc_data (dict): A dictionary containing:
+                - "name" (str): The recommended PC name.
+                - "components" (list of dicts): Each dict includes "name" and "price".
+
+        Notes:
+            - Only components that exist in the database (matched by name) are linked.
+            - If a component is not found in the database, it is skipped with a warning.
+            - The PC is marked as `is_customized=True` to indicate an AI-generated build.
+        """
+
+        name = new_pc_data["name"]
+        components = new_pc_data["components"]
+
+        # Make name unique
+        base_name = name
+        counter = 1
+        while Pc.objects.filter(name=name).exists():
+            name = f"{base_name}-{counter}"
+            counter += 1
+
+        # Create Pc in Database
+        pc = Pc.objects.create(
+            name=name,
+            is_customized=True
+        )
+
+        # Add components to Pc
+        for comp in components:
+            clean_name = re.sub(r"\s+\([^)]+\)$", "", comp["name"])
+            db_component = Component.objects.filter(name__icontains=clean_name).first()
+            if db_component:
+                pc.components.add(db_component)
+            else:
+                print(f"[WARN] Component not found in DB: {comp['name']}")
+
+        print(f"[INFO] Created PC: {pc.name} with {pc.components.count()} components")
+
 
 
 def extract_json_from_ai(content: str):

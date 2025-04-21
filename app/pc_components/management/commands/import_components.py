@@ -32,7 +32,7 @@ class Command(BaseCommand):
             file_path = os.path.join(base_dir, filename)
 
             if not os.path.exists(file_path):
-                self.stdout.write(self.style.WARNING(f'Datei nicht gefunden: {file_path}'))
+                self.stdout.write(self.style.WARNING(f'Data was not found: {file_path}'))
                 continue
 
             self.stdout.write(f'Importiere {component_type} aus {filename}...')
