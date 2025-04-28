@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useCart } from '../context/CartContext';
 
 function Configurator() {
-  const [budget, setBudget] = useState('');
+  const [budget, setBudget] = useState(300);
   const [requirements, setRequirements] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
-  const { addToCart } = useCart(); // ✅ Zugriff auf globalen Warenkorb
+  const { addToCart } = useCart();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,7 +47,7 @@ function Configurator() {
   const handleAddToCart = () => {
     if (!result) return;
     const cartItem = {
-      id: result.name, // kann auch UUID oder result.id sein, wenn vorhanden
+      id: result.name,
       name: result.name,
       price: result.total_cost,
       quantity: 1,
@@ -63,14 +63,17 @@ function Configurator() {
 
         <form onSubmit={handleSubmit} className="bg-[#1e293b] p-8 rounded-xl shadow-xl space-y-6">
           <div>
-            <label className="block text-sm text-gray-300 mb-1">Budget (EUR)</label>
+            <label className="block text-sm text-gray-300 mb-1">
+              Budget: <span className="text-cyan-400">{budget} €</span>
+            </label>
             <input
-              type="number"
+              type="range"
+              min={300}
+              max={5000}
+              step={50}
               value={budget}
               onChange={(e) => setBudget(Number(e.target.value))}
-              className="w-full p-4 rounded bg-[#0f172a] border border-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-              placeholder="Enter your budget"
-              required
+              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
             />
           </div>
 
@@ -81,7 +84,7 @@ function Configurator() {
               onChange={(e) => setRequirements(e.target.value)}
               className="w-full p-4 rounded bg-[#0f172a] border border-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
               rows={4}
-              placeholder="e.g. Make me pc for working and video cutting."
+              placeholder="e.g. Make me a PC for working and video editing."
               required
             />
           </div>
