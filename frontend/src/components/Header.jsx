@@ -6,7 +6,7 @@ import { useCart } from '../context/CartContext';
 
 function Header() {
   const navigate = useNavigate();
-  const location = useLocation(); // ✅ aktueller Pfad
+  const location = useLocation();
   const [username, setUsername] = useState('');
   const { cartItems } = useCart();
 
@@ -99,10 +99,7 @@ function Header() {
                     <span className="absolute left-0 -bottom-1 w-0 h-0.5 bg-cyan-400 transition-all duration-300 group-hover:w-full"></span>
                   </button>
                 ) : (
-                  <Link
-                    to="/login"
-                    className={navLinkClass('/login')}
-                  >
+                  <Link to="/login" className={navLinkClass('/login')}>
                     <span className="inline-block group-hover:-translate-y-0.5 transition-transform duration-300">
                       Login
                     </span>
@@ -112,11 +109,20 @@ function Header() {
               </li>
             </ul>
 
-            {/* Username */}
-            {isLoggedIn() && username && (
-              <div className="text-right text-white text-sm font-medium max-w-xs">
-                <span className="text-gray-400 mr-1">Logged in as:</span>
-                <span className="text-cyan-400 font-semibold">{username}</span>
+            {/* Username + Profile Icon */}
+            {isLoggedIn() && (
+              <div className="flex items-center gap-2 text-white text-sm font-medium">
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-2 hover:text-cyan-400 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center text-black font-bold">
+                    {username ? username.charAt(0).toUpperCase() : '?'}
+                  </div>
+                  <span className="hidden sm:inline">
+                    {username ? username : 'Profile'}
+                  </span>
+                </Link>
               </div>
             )}
           </div>
