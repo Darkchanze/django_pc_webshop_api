@@ -1,10 +1,12 @@
 # Django PC Webshop API - Local Development
 
-A RESTful API for a PC Components Webshop, developed with Django REST Framework. This version is optimized for local development.
+A RESTful API for a PC Components Webshop, developed with Django REST Framework and a React Frontend. This version is optimized for local development.
 
 ## 🚀 Features
 
 - RESTful API with Django REST Framework
+- React Frontend with modern UI
+- AI-powered PC Configuration Recommendations
 - JWT Authentication
 - SQLite Database (for local development)
 - Swagger/OpenAPI Documentation
@@ -15,6 +17,8 @@ A RESTful API for a PC Components Webshop, developed with Django REST Framework.
 ## 📋 Prerequisites
 
 - Python 3.12 or higher
+- Node.js 18.x or higher
+- npm (Node Package Manager)
 - pip (Python Package Manager)
 - Git (optional, for version control)
 
@@ -26,7 +30,9 @@ git clone https://github.com/IhrUsername/django_pc_webshop_api.git
 cd django_pc_webshop_api
 ```
 
-2. **Create and Activate Virtual Environment**
+2. **Backend Setup**
+
+a) **Create and Activate Virtual Environment**
 ```bash
 # Windows
 python -m venv venv
@@ -37,50 +43,66 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-3. **Install Dependencies**
+b) **Install Python Dependencies**
 ```bash
 pip install -r requirements.txt
 ```
 
-4. **Set Up Environment Variables**
+c) **Set Up Environment Variables**
 Create a `.env` file in the root directory:
 ```env
 DATABASE_ADMIN_PASSWORD_LOCAL="YourLocalPassword"
 PYTHONPATH=D:\Python Projects\django_pc_webshop_api
+OPENAI_API_KEY="Your-OpenAI-API-Key"  # For PC recommendations
 ```
 
-5. **Run Database Migrations**
+d) **Run Database Migrations**
 ```bash
 python app/manage.py migrate
 ```
 
-6. **Create Superuser**
+e) **Create Superuser**
 ```bash
 python app/manage.py createsuperuser
 ```
 
-7. **Collect Static Files**
+f) **Collect Static Files**
 ```bash
 python app/manage.py collectstatic --noinput
 ```
 
+3. **Frontend Setup**
+
+a) **Navigate to Frontend Directory**
+```bash
+cd frontend
+```
+
+b) **Install Node Dependencies**
+```bash
+npm install
+```
+
+c) **Build Frontend**
+```bash
+npm run build
+```
+
 ## 🚀 Start Development Server
 
-1. **Activate Virtual Environment** (if not already done)
+1. **Start Backend Server**
 ```bash
-# Windows
-.\venv\Scripts\activate
-
-# Linux/Mac
-source venv/bin/activate
-```
-
-2. **Start Server**
-```bash
+# In root directory
 python app/manage.py runserver
 ```
+The backend server will be available at `http://127.0.0.1:8000`.
 
-The server will be available at `http://127.0.0.1:8000`.
+2. **Start Frontend Development Server**
+```bash
+# In frontend directory
+npm start
+```
+The frontend server will be available at `http://localhost:3000`.
 
 ## 📚 API Documentation
 
@@ -96,8 +118,13 @@ django_pc_webshop_api/
 │   ├── app/               # Django project configuration
 │   ├── users/             # User management
 │   ├── pc_components/     # PC components
+│   ├── pc_recommendations/# AI-powered PC recommendations
 │   ├── orders/           # Orders
 │   └── static/           # Static files
+├── frontend/              # React Frontend
+│   ├── src/              # Source code
+│   ├── public/           # Public files
+│   └── build/            # Built frontend files
 ├── venv/                  # Virtual environment
 ├── requirements.txt       # Python dependencies
 ├── .env                   # Environment variables
@@ -109,7 +136,7 @@ django_pc_webshop_api/
 ### Database
 - SQLite is used as local database
 - Database file: `db.sqlite3`
-- Migrations: `python app/manage.py makemigrations`
+- Create migrations: `python app/manage.py makemigrations`
 - Apply: `python app/manage.py migrate`
 
 ### Debug Mode
@@ -131,12 +158,13 @@ django_pc_webshop_api/
 
 ### API Tests
 ```bash
-# Run tests
+# Run all tests
 python app/manage.py test
 
 # Test specific app
 python app/manage.py test users
 python app/manage.py test pc_components
+python app/manage.py test pc_recommendations
 python app/manage.py test orders
 ```
 
@@ -155,6 +183,10 @@ python app/manage.py shell
 # Reset migrations
 python app/manage.py migrate --fake zero
 python app/manage.py migrate
+
+# Rebuild frontend
+cd frontend
+npm run build
 ```
 
 ## 🤝 Contributing
@@ -173,7 +205,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Nico Wittemann** - [https://github.com/Darkchanze/django_pc_webshop_api](https://github.com/Darkchanze/django_pc_webshop_api)
 
-## 🙏 Acknowledgments
-
-- Django REST Framework Team
-- All contributors and supporters
