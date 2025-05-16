@@ -1,5 +1,8 @@
 # Django PC Webshop API - Local Development
 
+> ⚠️ **Note:** This project’s active development is in the `deployment` branch.  
+> The `main` branch is outdated and kept only for legacy reference because it is ready to be deployed on Render. 
+
 A RESTful API for a PC Components Webshop, developed with Django REST Framework and a React Frontend. This version is optimized for local development.
 
 ## 🚀 Features
@@ -26,6 +29,7 @@ A RESTful API for a PC Components Webshop, developed with Django REST Framework 
 
 1. **Clone Repository** (if using Git)
 ```bash
+git checkout deployment
 git clone https://github.com/IhrUsername/django_pc_webshop_api.git
 cd django_pc_webshop_api
 ```
